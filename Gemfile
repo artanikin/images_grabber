@@ -4,6 +4,7 @@ gem 'rails', '3.1.12'
 gem 'jquery-rails'
 gem 'sqlite3'
 gem 'nokogiri'
+gem 'bootstrap-sass'
 
 
 group :assets do
