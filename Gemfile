@@ -2,6 +2,7 @@ source 'http://rubygems.org'
 
 gem 'rails', '3.1.12'
 gem 'jquery-rails'
+gem 'fancybox-rails'
 gem 'sqlite3'
 gem 'nokogiri'
 gem 'bootstrap-sass'

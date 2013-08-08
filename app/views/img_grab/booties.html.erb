@@ -1,0 +1,18 @@
+<h1>Трофеи</h1>
+<table class="table table-bordered table-striped table-hover">
+  <thead>
+    <tr>
+      <th class="span6">Название страницы</th>
+      <th class="span2" colspan=2>Кол-во изображений</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @dirs.each do |dir| %>
+      <tr>
+        <td class="lf_cont"><%= truncate(dir[:name], length: 60) %></td>
+        <td><%= dir[:count] %></td>
+        <td><%= link_to "Посмотреть", "show_booty?dir=#{dir[:name]}", class: "btn btn-primary btn-small" %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

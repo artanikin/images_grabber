@@ -1,1 +1,7 @@
 <h1> Show Booty </h1>
+
+<%= @dir %>
+
+<% @images.each do |image| %>
+<%= link_to image, "/assets/downloaded/#{@dir}/#{image}", html_options={ class: "grouped_elements", rel: "group1"} %>
+<% end %>

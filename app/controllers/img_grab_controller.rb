@@ -3,31 +3,50 @@ class ImgGrabController < ApplicationController
   def index
   end
 
-  def bootys
-
+  def booties
     @dirs = []
-    Dir.foreach("./app/assets/images/downloaded/") do |dir|
-      @dirs << dir unless dir.index /^\.{1}+$/
-    end
-    @dirs.sort!
+    base_dir = "./app/assets/images/downloaded/"
 
+    Dir.foreach(base_dir) do |dir|
+      unless dir.eql?(".") or dir.eql?("..")
+        @dirs << get_dir_info(base_dir, dir)
+      end
+    end
   end
 
   def show_booty
+    @dir = params[:dir] if params[:dir]
+    base_dir = "./app/assets/images/downloaded/"
+    path = "#{base_dir}#{@dir}"
+
+    if File.directory? path
+      @images = Dir.entries path
+      @images.delete_if { |x| x == "." or x ==".." }
+    else
+      flash[:danger] = "This directory does not exist."
+      redirect_to :booties
+    end
   end
 
   def grabber
     scheme, uri = params[:scheme], params[:uri]
     uri = uri.prepend_if_not_exist("#{scheme}://")
- 
+
     begin
       open(uri) do |page|
         @images = get_urls_images(page)
-        dir = make_dir(uri)
-        download_images(@images, dir)
-        img_count = @images.count
-        flash[:success] = "Congratulations! Downloaded all the images."
-        redirect_to root_path
+        unless @images.empty?
+          dir = make_dir(uri)
+          download_images(@images, dir)
+          img_count = @images.count
+          flash[:success] = "Congratulations! Downloaded all the images."
+          redirect_to booties_path
+        else
+          flash[:info] = "We're sorry. But on the page is not found picture."
+          @uri = params[:uri]
+          @add_class = "info"
+          render :index
+        end
       end
     rescue
       flash.now[:danger] = "The URL you entered does not work"
@@ -73,7 +92,7 @@ class ImgGrabController < ApplicationController
     end
 
     def get_name_dir(uri)
-      uri = uri.gsub(/^(http:\/\/|https:\/\/)/, "").split("\/").join('_')
+      uri = uri.gsub(/^(http:\/\/|https:\/\/)|(\?)/, "").split("\/").join('_')
       uri.prepend "./app/assets/images/downloaded/"
     end
 
@@ -103,6 +122,19 @@ class ImgGrabController < ApplicationController
         end
       end
       thread.each { |t| t.join; }
+    end
+
+    def get_dir_info(base_dir, dir)
+      dir_info = {}
+      path = "#{base_dir}#{dir}"
+
+      files = Dir.entries(path) 
+      files.delete_if { |x| x == "." or x == ".." }
+
+      dir_info[:name]  = dir
+      dir_info[:count] = files.count
+
+      dir_info
     end
 
 end

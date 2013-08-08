@@ -63,12 +63,12 @@ p {
   padding-top: 9px;
   font-weight: bold;
   line-height: 1;
+  &:hover {
+    color: #fff;
+    text-decoration: none;
+  }
 }
 
-#logo:hover {
-  color: #fff;
-  text-decoration: none;
-}
 
 /* footer */
 
@@ -77,18 +77,15 @@ footer {
   padding-top: 5px;
   border-top: 1px solid #eaeaea;
   color: #999;
-}
-
-footer a {
-  color: #555;
-}
-
-footer a:hover {
-  color: #222;
-}
-
-footer small {
-  float: left;
+  small {
+    float: left;
+  }
+  a {
+    color: #555;
+    &:hover {
+      color: #222;
+    }
+  }
 }
 
 .hero-unit {
@@ -100,3 +97,20 @@ footer small {
 select.scheme {
     width: 5.2em;
 }
+
+.table {
+  width: 75%;
+  margin: 0 auto;
+  thead {
+    background-color: #ccc;
+    font-weight: bold;
+  }
+  th, td {
+    text-align: center;
+  }
+  .lf_cont {
+    text-align: left;
+  }
+}
+
+// .table { width: 80%; }
