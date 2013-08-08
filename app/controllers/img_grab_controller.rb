@@ -1,42 +1,50 @@
 class ImgGrabController < ApplicationController
 
-  
-
   def index
   end
 
-  def grabber
+  def bootys
 
-    scheme = "http://"
-    uri = "rezh-internat.ru"
-    uri = uri.prepend_if_not_exist(scheme)
-    
-    @images = get_urls_images(uri)
-    
-    dir = get_name_dir(uri)
-    FileUtils.makedirs(dir)
-
-    threads = @images.map do |img_uri|
-      Thread.new { download_image(img_uri, dir) }
+    @dirs = []
+    Dir.foreach("./app/assets/images/downloaded/") do |dir|
+      @dirs << dir unless dir.index /^\.{1}+$/
     end
+    @dirs.sort!
 
-    threads.each &:join
+  end
 
-    @size = threads.size
+  def show_booty
+  end
 
+  def grabber
+    scheme, uri = params[:scheme], params[:uri]
+    uri = uri.prepend_if_not_exist("#{scheme}://")
+ 
+    begin
+      open(uri) do |page|
+        @images = get_urls_images(page)
+        dir = make_dir(uri)
+        download_images(@images, dir)
+        @size = @images.count
+        flash[:success] = "Congratulations! All images successfully downloaded!"
+      end
+    rescue
+      flash[:danger] = "The URL you entered does not work"
+      @add_class = "error"
+      @uri = params[:uri]
+      render :index
+    end
   end
 
   private 
 
-    def get_urls_images(uri)
+    def get_urls_images(page)
       images = []
-      open(uri) do |f|
-        page = Nokogiri::HTML(f.read)
-        base_uri = f.base_uri
-        page.css('img').each do |img|
-          src = img[:src]
-          images << make_correct_link(src, base_uri) if is_image?(src)
-        end
+      base_uri = page.base_uri
+      html_page = Nokogiri::HTML(page)
+      html_page.css('img').each do |img|
+        src = img[:src]
+        images << make_correct_link(src, base_uri) if is_image?(src)
       end
       images.uniq
     end
@@ -54,16 +62,46 @@ class ImgGrabController < ApplicationController
       end
       img_src.prepend_if_not_exist("#{uri.scheme}://")
     end
+    
+
+    def make_dir(uri)
+      dir = get_name_dir(uri)
+      FileUtils.remove_dir(dir) if File.directory? dir
+      FileUtils.makedirs(dir)
+      dir
+    end
 
     def get_name_dir(uri)
       uri = uri.gsub(/^(http:\/\/|https:\/\/)/, "").split("\/").join('_')
       uri.prepend "./app/assets/images/downloaded/"
     end
 
-    def download_image(image_src, dir)
-      img = open(image_src, 'rb').read
-      name = image_src.match(/[\w\.-]+$/i)
-      File.open("#{dir}/#{name}", 'wb') { |file| file.write img }
+
+    def download_images(images_src, dir)
+      queue = SizedQueue.new(20)
+      @mutex = Mutex.new
+      thread = []
+
+      images_src.each do |src|
+        Thread.new do
+          img = open(src, 'rb') { |img_src| img_src.read }
+          name = src.match(/[\w\.-]+$/i)
+          queue.push(img: img, name: name)
+        end
+      end
+
+      images_src.count.times do
+        thread << Thread.new do
+          img = nil
+          @mutex.synchronize { img = queue.pop }
+
+          if img
+            path = "#{dir}/#{img[:name]}"
+            File.open(path, 'wb') { |file| file.write img[:img] }
+          end
+        end
+      end
+      thread.each { |t| t.join; }
     end
 
 end
