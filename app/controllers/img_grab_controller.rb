@@ -25,11 +25,12 @@ class ImgGrabController < ApplicationController
         @images = get_urls_images(page)
         dir = make_dir(uri)
         download_images(@images, dir)
-        @size = @images.count
-        flash[:success] = "Congratulations! All images successfully downloaded!"
+        img_count = @images.count
+        flash[:success] = "Congratulations! Downloaded all the images."
+        redirect_to root_path
       end
     rescue
-      flash[:danger] = "The URL you entered does not work"
+      flash.now[:danger] = "The URL you entered does not work"
       @add_class = "error"
       @uri = params[:uri]
       render :index
