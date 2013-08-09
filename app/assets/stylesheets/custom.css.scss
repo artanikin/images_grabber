@@ -95,7 +95,7 @@ footer {
 /* form */
 
 select.scheme {
-    width: 5.2em;
+    width: 5.8em;
 }
 
 .table {
@@ -113,4 +113,12 @@ select.scheme {
   }
 }
 
-// .table { width: 80%; }
+div.well{
+  width: 80%;
+  margin: 1em auto;
+  text-align: center;
+  span {
+    margin-top: 1em;
+    display: block;
+  }
+}
