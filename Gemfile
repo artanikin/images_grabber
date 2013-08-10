@@ -6,7 +6,7 @@ gem 'fancybox-rails'
 gem 'sqlite3'
 gem 'nokogiri'
 gem 'bootstrap-sass'
-
+gem 'mechanize'
 
 group :assets do
   gem 'sass-rails',   '~> 3.1.5'
