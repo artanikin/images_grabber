@@ -1,10 +1,8 @@
 class String
-  def prepend(str)
-    str + self
-  end
 
-  def prepend_if_not_exist(str)
-      return self.prepend str unless self.include? str
-      self
+  # Добавляет в начало строки, по отношению к которой был вызван
+  # метод, строковое значение переданное в виде аргумента
+  def prepend(str)
+    str.to_s + self
   end
 end

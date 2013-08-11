@@ -1,6 +1,6 @@
 <% @images.each do |image| %>
   <div class="well well-small">
-    <%= link_to create_link(@dir, image), "/assets/downloaded/#{@dir}/#{image}",
+    <%= link_to create_content_block(@dir, image), "/assets/downloaded/#{@dir}/#{image}",
                 html_options={ class: "grouped_elements", rel: "img_group1" } %>
   </div>
 <% end %>

@@ -1,88 +1,84 @@
 class ImgGrabController < ApplicationController
 
+  BASE_DIR = "./app/assets/images/downloaded/"
+
   def index
   end
 
   def booties
     @dirs = []
-    base_dir = "./app/assets/images/downloaded/"
-
-    Dir.foreach(base_dir) do |dir|
+    Dir.foreach(BASE_DIR) do |dir|
       unless dir.eql?(".") or dir.eql?("..")
-        @dirs << get_dir_info(base_dir, dir)
+        @dirs << get_dir_info(dir)
       end
     end
   end
 
   def show_booty
     @dir = params[:dir] if params[:dir]
-    base_dir = "./app/assets/images/downloaded/"
-    path = "#{base_dir}#{@dir}"
+    path = "#{BASE_DIR}#{@dir}"
 
     if File.directory? path
       @images = Dir.entries path
       @images.delete_if { |x| x == "." or x ==".." }
     else
       flash[:danger] = "This directory does not exist."
-      redirect_to :booties
+      redirect_to booties_path
     end
   end
 
   def grabber
-    scheme, uri = params[:scheme], params[:uri]
-    uri = uri.prepend_if_not_exist("#{scheme}://")
-
     begin
-      open(uri) do |page|
-        @images = get_urls_images(page)
-        unless @images.empty?
-          dir = make_dir(uri)
-          download_images(@images, dir)
-          img_count = @images.count
-          flash[:success] = "Congratulations! Downloaded all the images."
-          redirect_to booties_path
-        else
-          flash[:info] = "We're sorry. But on the page is not found picture."
-          @uri = params[:uri]
-          @add_class = "info"
-          render :index
-        end
+
+      scheme, input_uri = params[:scheme], params[:uri]
+      input_uri = input_uri.prepend("#{scheme}://") unless input_uri.start_with?("http://", "https://")
+      uri = URI(input_uri)
+
+      agent  = Mechanize.new
+      agent.user_agent_alias = 'Linux Mozilla'
+      page   = agent.get(uri)
+      images = page.images
+
+      unless images.empty?
+        uniq_src_img = []
+        images.each { |image| uniq_src_img << image.to_s if is_image? image.to_s }
+        uniq_src_img.uniq!
+
+        dir = make_dir(uri.to_s)
+
+        report  = download(uniq_src_img, dir)
+        runtime = Time.at(report[:runtime]).strftime("%M:%S")
+
+        flash[:success] = "Congratulations! Uploaded #{report[:uploaded]} pictures. Runtime #{runtime} sec."
+        redirect_to booties_path
+      else
+        set_notice("warning", "We're sorry. But on the page is not found pictures.", "warning")
       end
+
+    rescue URI::InvalidURIError
+      set_notice("danger", "Sorry, your entered URL not correctly.")
+    rescue Mechanize::ResponseCodeError => error
+      set_notice("danger", "Sorry, got a bad page status code #{error.response_code}.")
+    rescue Errno::ENOENT
+      set_notice("danger", "Sorry, you typed not existing page address.")
     rescue
-      flash.now[:danger] = "The URL you entered does not work"
-      @add_class = "error"
-      @uri = params[:uri]
-      render :index
+      set_notice("danger", "Sorry, an unexpected error has occurred.")
     end
   end
 
   private 
 
-    def get_urls_images(page)
-      images = []
-      base_uri = page.base_uri
-      html_page = Nokogiri::HTML(page)
-      html_page.css('img').each do |img|
-        src = img[:src]
-        images << make_correct_link(src, base_uri) if is_image?(src)
-      end
-      images.uniq
+    def set_notice(type, message, class_field="error" )
+      flash.now[type] = message
+      @add_class = class_field
+      @uri = params[:uri]
+      render :index
     end
 
     def is_image?(uri)
       pattern = /[[:graph:]]+(\.png|\.jpg|\.jpeg|\.gif|\.bmp|\.ico|\.svg)/i
       uri.match(pattern)
     end
-
-    def make_correct_link(img_src, uri)
-      if img_src.match(/^\/{1}[\w\d\.\-_]+/i) then
-        img_src = img_src.prepend_if_not_exist(uri.host)
-      elsif img_src.match(/^\/{2}[\w\d\.\-_]+/i) then
-        img_src = img_src.gsub(/^(\/{2})/, "")
-      end
-      img_src.prepend_if_not_exist("#{uri.scheme}://")
-    end
-    
 
     def make_dir(uri)
       dir = get_name_dir(uri)
@@ -93,40 +89,45 @@ class ImgGrabController < ApplicationController
 
     def get_name_dir(uri)
       uri = uri.gsub(/^(http:\/\/|https:\/\/)|(\?)/, "").split("\/").join('_')
-      uri.prepend "./app/assets/images/downloaded/"
+      uri.prepend BASE_DIR
     end
-
-
-    def download_images(images_src, dir)
-      queue = SizedQueue.new(20)
-      @mutex = Mutex.new
+  
+    def download(urls, dir)
+      start_time = Time.now
+      agent = Mechanize.new
+      agent.user_agent_alias = 'Linux Mozilla'
+      mutex = Mutex.new
       thread = []
+      report = { uploaded: 0, not_uploaded: 0, runtime: 0 }
 
-      images_src.each do |src|
-        Thread.new do
-          img = open(src, 'rb') { |img_src| img_src.read }
-          name = src.match(/[\w\.-]+$/i)
-          queue.push(img: img, name: name)
-        end
-      end
-
-      images_src.count.times do
+      urls.each do |url|
         thread << Thread.new do
-          img = nil
-          @mutex.synchronize { img = queue.pop }
-
-          if img
-            path = "#{dir}/#{img[:name]}"
-            File.open(path, 'wb') { |file| file.write img[:img] }
+          begin
+            file = nil
+            mutex.synchronize do 
+              file = agent.get(url)
+            end
+            if file
+              file_name = file.filename
+              file.save "#{dir}/#{file_name}"
+              mutex.synchronize { report[:uploaded] += 1 }
+              # Thread.current.exit
+            end
+          rescue 
+            mutex.synchronize { report[:not_uploaded] += 0 }
           end
         end
       end
-      thread.each { |t| t.join; }
+
+      thread.each { |t| t.join }
+
+      report[:runtime] = (Time.now - start_time).to_f
+      report
     end
 
-    def get_dir_info(base_dir, dir)
+    def get_dir_info(dir)
       dir_info = {}
-      path = "#{base_dir}#{dir}"
+      path = "#{BASE_DIR}#{dir}"
 
       files = Dir.entries(path) 
       files.delete_if { |x| x == "." or x == ".." }
@@ -136,5 +137,4 @@ class ImgGrabController < ApplicationController
 
       dir_info
     end
-
 end
