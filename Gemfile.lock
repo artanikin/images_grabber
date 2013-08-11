@@ -141,7 +141,6 @@ DEPENDENCIES
   fancybox-rails
   jquery-rails
   mechanize
-  nokogiri
   rails (= 3.1.12)
   sass-rails (~> 3.1.5)
   sqlite3
