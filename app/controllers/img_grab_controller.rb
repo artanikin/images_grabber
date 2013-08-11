@@ -2,23 +2,27 @@ class ImgGrabController < ApplicationController
 
   BASE_DIR = "./app/assets/images/downloaded/"
 
-
   def index
   end
 
 
   def booties
     # Отображает все директории, в которых сохранены картинки.
-    @dirs = []
-    Dir.foreach(BASE_DIR) do |dir|
-      unless dir.eql?(".") or dir.eql?("..")
+    begin
+      @dirs = []
+      Dir.foreach(BASE_DIR) do |dir|
+        unless dir.eql?(".") or dir.eql?("..")
 
-        # Получение дополнительной информации о директории
-        @dirs << get_dir_info(dir)
+          # Получение дополнительной информации о директории
+          @dirs << get_dir_info(dir)
+        end
       end
-    end
-    if @dirs.empty?
-      set_notice_with_redirect("danger", "Sorry, there is not any uploaded image.")
+      
+      raise Errno::ENOENT if @dirs.empty?
+        
+    rescue Errno::ENOENT
+      # Если папка пуста, то отображается сообщение об ошибке
+      set_notice_with_redirect("danger", "This section is empty.")
     end
   end
 
