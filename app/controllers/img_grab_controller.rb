@@ -1,6 +1,6 @@
 class ImgGrabController < ApplicationController
 
-  BASE_DIR = "./app/assets/images/downloaded/"
+  BASE_DIR = "./app/assets/images/"
 
   def index
   end
@@ -11,15 +11,16 @@ class ImgGrabController < ApplicationController
     begin
       @dirs = []
       Dir.foreach(BASE_DIR) do |dir|
-        unless dir.eql?(".") or dir.eql?("..")
 
+        if File.directory?("#{BASE_DIR}#{dir}")
           # Получение дополнительной информации о директории
-          @dirs << get_dir_info(dir)
+          @dirs << get_dir_info(dir) unless dir.eql?(".") or dir.eql?("..")
         end
       end
       
+      # Если папка пуста, то отображается сообщение об ошибке
       raise Errno::ENOENT if @dirs.empty?
-        
+
     rescue Errno::ENOENT
       # Если папка пуста, то отображается сообщение об ошибке
       set_notice_with_redirect("danger", "This section is empty.")
