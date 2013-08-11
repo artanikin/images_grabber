@@ -5,5 +5,5 @@
         options_for_select([["http://", "http"], ["https://", "https"]]), class: "scheme" %>
     <%= text_field_tag :uri, @uri, placeholder: "www.example.ru"  %>
   </div>
-  <%= submit_tag "Поехали", class: "btn btn-success btn-large"%>
+  <%= submit_tag "Поехали", class: "btn btn-success btn-large", id: "download_btn" %>
 <% end %>
